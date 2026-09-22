@@ -38,67 +38,68 @@
  * The above values will be the same _even if_ different values for `ENVIRONMENT` or `PUBLIC_BASE_URL` are set at runtime, as they are statically replaced in your code with their build time values.
  */
 declare module '$env/static/private' {
-	export const LESSOPEN: string;
-	export const USER: string;
-	export const npm_config_user_agent: string;
+	export const SVELTEKIT_FORK: string;
+	export const NODE_ENV: string;
+	export const EDITOR: string;
+	export const npm_lifecycle_event: string;
+	export const WSL_INTEROP: string;
+	export const HOME: string;
+	export const _: string;
+	export const COLOR: string;
+	export const npm_config_npm_version: string;
+	export const npm_config_noproxy: string;
+	export const npm_config_globalconfig: string;
+	export const WSL_DISTRO_NAME: string;
+	export const npm_config_prefix: string;
+	export const NAME: string;
+	export const LESSCLOSE: string;
+	export const JAVA_HOME: string;
+	export const NVM_DIR: string;
+	export const npm_package_json: string;
+	export const DBUS_SESSION_BUS_ADDRESS: string;
+	export const OLDPWD: string;
+	export const npm_config_local_prefix: string;
+	export const npm_config_userconfig: string;
+	export const NVM_INC: string;
+	export const PATH: string;
+	export const npm_command: string;
+	export const LOGNAME: string;
 	export const STARSHIP_SHELL: string;
 	export const npm_node_execpath: string;
-	export const SHLVL: string;
 	export const WT_PROFILE_ID: string;
-	export const npm_config_noproxy: string;
-	export const HOME: string;
-	export const STUDIO_JDK: string;
-	export const OLDPWD: string;
-	export const NVM_BIN: string;
-	export const npm_package_json: string;
-	export const NVM_INC: string;
-	export const npm_config_userconfig: string;
-	export const npm_config_local_prefix: string;
-	export const DBUS_SESSION_BUS_ADDRESS: string;
-	export const npm_config_engine_strict: string;
-	export const WSL_DISTRO_NAME: string;
-	export const COLOR: string;
-	export const NVM_DIR: string;
+	export const SHLVL: string;
+	export const WT_SESSION: string;
 	export const WAYLAND_DISPLAY: string;
-	export const LOGNAME: string;
-	export const NAME: string;
-	export const WSL_INTEROP: string;
+	export const USER: string;
+	export const NVM_BIN: string;
 	export const PULSE_SERVER: string;
-	export const _: string;
-	export const npm_config_prefix: string;
-	export const npm_config_npm_version: string;
+	export const npm_config_user_agent: string;
+	export const STUDIO_JDK: string;
+	export const npm_lifecycle_script: string;
+	export const npm_package_version: string;
+	export const npm_config_global_prefix: string;
 	export const TERM: string;
+	export const npm_config_engine_strict: string;
 	export const npm_config_cache: string;
-	export const npm_config_node_gyp: string;
-	export const PATH: string;
 	export const NODE: string;
 	export const npm_package_name: string;
-	export const WT_SESSION: string;
 	export const XDG_RUNTIME_DIR: string;
 	export const DISPLAY: string;
+	export const LESSOPEN: string;
+	export const XDG_DATA_DIRS: string;
+	export const STARSHIP_SESSION_KEY: string;
+	export const WSL2_GUI_APPS_ENABLED: string;
 	export const LANG: string;
 	export const LS_COLORS: string;
-	export const npm_lifecycle_script: string;
+	export const npm_config_node_gyp: string;
 	export const SHELL: string;
-	export const npm_package_version: string;
-	export const npm_lifecycle_event: string;
-	export const LESSCLOSE: string;
-	export const npm_config_globalconfig: string;
-	export const npm_config_init_module: string;
-	export const JAVA_HOME: string;
-	export const PWD: string;
 	export const npm_execpath: string;
-	export const NVM_CD_FLAGS: string;
-	export const XDG_DATA_DIRS: string;
-	export const npm_config_global_prefix: string;
-	export const STARSHIP_SESSION_KEY: string;
-	export const npm_command: string;
-	export const WSL2_GUI_APPS_ENABLED: string;
-	export const HOSTTYPE: string;
+	export const npm_config_init_module: string;
+	export const PWD: string;
 	export const WSLENV: string;
+	export const NVM_CD_FLAGS: string;
+	export const HOSTTYPE: string;
 	export const INIT_CWD: string;
-	export const EDITOR: string;
-	export const NODE_ENV: string;
 }
 
 /**
@@ -135,7 +136,7 @@ declare module '$env/static/private' {
  * The above values will be the same _even if_ different values for `ENVIRONMENT` or `PUBLIC_BASE_URL` are set at runtime, as they are statically replaced in your code with their build time values.
  */
 declare module '$env/static/public' {
-	
+	export const PUBLIC_API_BASE_URL: string;
 }
 
 /**
@@ -185,67 +186,68 @@ declare module '$env/static/public' {
  */
 declare module '$env/dynamic/private' {
 	export const env: {
-		LESSOPEN: string;
-		USER: string;
-		npm_config_user_agent: string;
+		SVELTEKIT_FORK: string;
+		NODE_ENV: string;
+		EDITOR: string;
+		npm_lifecycle_event: string;
+		WSL_INTEROP: string;
+		HOME: string;
+		_: string;
+		COLOR: string;
+		npm_config_npm_version: string;
+		npm_config_noproxy: string;
+		npm_config_globalconfig: string;
+		WSL_DISTRO_NAME: string;
+		npm_config_prefix: string;
+		NAME: string;
+		LESSCLOSE: string;
+		JAVA_HOME: string;
+		NVM_DIR: string;
+		npm_package_json: string;
+		DBUS_SESSION_BUS_ADDRESS: string;
+		OLDPWD: string;
+		npm_config_local_prefix: string;
+		npm_config_userconfig: string;
+		NVM_INC: string;
+		PATH: string;
+		npm_command: string;
+		LOGNAME: string;
 		STARSHIP_SHELL: string;
 		npm_node_execpath: string;
-		SHLVL: string;
 		WT_PROFILE_ID: string;
-		npm_config_noproxy: string;
-		HOME: string;
-		STUDIO_JDK: string;
-		OLDPWD: string;
-		NVM_BIN: string;
-		npm_package_json: string;
-		NVM_INC: string;
-		npm_config_userconfig: string;
-		npm_config_local_prefix: string;
-		DBUS_SESSION_BUS_ADDRESS: string;
-		npm_config_engine_strict: string;
-		WSL_DISTRO_NAME: string;
-		COLOR: string;
-		NVM_DIR: string;
+		SHLVL: string;
+		WT_SESSION: string;
 		WAYLAND_DISPLAY: string;
-		LOGNAME: string;
-		NAME: string;
-		WSL_INTEROP: string;
+		USER: string;
+		NVM_BIN: string;
 		PULSE_SERVER: string;
-		_: string;
-		npm_config_prefix: string;
-		npm_config_npm_version: string;
+		npm_config_user_agent: string;
+		STUDIO_JDK: string;
+		npm_lifecycle_script: string;
+		npm_package_version: string;
+		npm_config_global_prefix: string;
 		TERM: string;
+		npm_config_engine_strict: string;
 		npm_config_cache: string;
-		npm_config_node_gyp: string;
-		PATH: string;
 		NODE: string;
 		npm_package_name: string;
-		WT_SESSION: string;
 		XDG_RUNTIME_DIR: string;
 		DISPLAY: string;
+		LESSOPEN: string;
+		XDG_DATA_DIRS: string;
+		STARSHIP_SESSION_KEY: string;
+		WSL2_GUI_APPS_ENABLED: string;
 		LANG: string;
 		LS_COLORS: string;
-		npm_lifecycle_script: string;
+		npm_config_node_gyp: string;
 		SHELL: string;
-		npm_package_version: string;
-		npm_lifecycle_event: string;
-		LESSCLOSE: string;
-		npm_config_globalconfig: string;
-		npm_config_init_module: string;
-		JAVA_HOME: string;
-		PWD: string;
 		npm_execpath: string;
-		NVM_CD_FLAGS: string;
-		XDG_DATA_DIRS: string;
-		npm_config_global_prefix: string;
-		STARSHIP_SESSION_KEY: string;
-		npm_command: string;
-		WSL2_GUI_APPS_ENABLED: string;
-		HOSTTYPE: string;
+		npm_config_init_module: string;
+		PWD: string;
 		WSLENV: string;
+		NVM_CD_FLAGS: string;
+		HOSTTYPE: string;
 		INIT_CWD: string;
-		EDITOR: string;
-		NODE_ENV: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}
@@ -301,6 +303,7 @@ declare module '$env/dynamic/private' {
  */
 declare module '$env/dynamic/public' {
 	export const env: {
+		PUBLIC_API_BASE_URL: string;
 		[key: `PUBLIC_${string}`]: string | undefined;
 	}
 }
