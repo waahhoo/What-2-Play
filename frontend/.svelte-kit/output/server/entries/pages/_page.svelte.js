@@ -3567,7 +3567,7 @@ function Input($$renderer, $$props) {
 }
 //#endregion
 //#region src/lib/API.ts
-var API_BASE_URL = "http://localhost:8000";
+var API_BASE_URL = "https://what-2-play-backend.onrender.com";
 async function get(endpoint) {
 	const response = await fetch(`${API_BASE_URL}${endpoint}`);
 	if (!response.ok) throw new Error(await getErrorMessage(response));

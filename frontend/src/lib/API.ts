@@ -32,9 +32,7 @@ export type OwnershipResponse = {
 
 export async function get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!response.ok) {
-        throw new Error(await getErrorMessage(response));
-    }
+    if (!response.ok) throw new Error(await getErrorMessage(response));
     return response.json() as Promise<T>;
 }
 
@@ -44,14 +42,14 @@ export async function post<TResponse, TBody = unknown>(endpoint: string, body?: 
         headers: body === undefined ? undefined : { "Content-Type": "application/json" },
         body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) {
-        throw new Error(await getErrorMessage(response));
-    }
+    if (!response.ok) throw new Error(await getErrorMessage(response));
     if (response.status === 204) return undefined as TResponse;
     return response.json() as Promise<TResponse>;
 }
 
 export const getUsers = () => get<User[]>("/users");
+export const getUserGames = (fullName: string) =>
+    get<Game[]>(`/users/${encodeURIComponent(fullName)}/games`);
 export const createUser = (user: UserCreate) => post<User, UserCreate>("/users", user);
 export const getGames = () => get<Game[]>("/games");
 export const createGame = (game: GameCreate) => post<Game, GameCreate>("/games", game);
