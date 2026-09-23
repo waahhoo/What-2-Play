@@ -3991,7 +3991,7 @@ function _page($$renderer, $$props) {
 		function $$render_inner($$renderer) {
 			head("1uha8ag", $$renderer, ($$renderer) => {
 				$$renderer.title(($$renderer) => {
-					$$renderer.push(`<title>Gameing</title>`);
+					$$renderer.push(`<title>What 2 Play</title>`);
 				});
 				$$renderer.push(`<meta name="description" content="Find the perfect game for everyone in your group."/>`);
 			});

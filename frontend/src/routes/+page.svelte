@@ -426,7 +426,7 @@
 </script>
 
 <svelte:head>
-    <title>Gameing</title>
+    <title>What 2 Play</title>
     <meta
         name="description"
         content="Find the perfect game for everyone in your group."
