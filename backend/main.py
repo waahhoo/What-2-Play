@@ -110,3 +110,18 @@ def add_owned_game(full_name: str, game_name: str, session: Session = Depends(ge
     session.add(UserGame(user_full_name=full_name, game_name=game_name))
     session.commit()
     return {"message": f"{full_name} now owns {game_name}"}
+
+
+@app.delete("/users/{full_name}/games/{game_name}")
+def remove_owned_game(full_name: str, game_name: str, session: Session = Depends(get_session)):
+    if not session.get(User, full_name):
+        raise HTTPException(status_code=404, detail="User not found")
+    if not session.get(Game, game_name):
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    ownership = session.get(UserGame, (full_name, game_name))
+    if ownership:
+        session.delete(ownership)
+        session.commit()
+
+    return {"message": f"{full_name} no longer owns {game_name}"}

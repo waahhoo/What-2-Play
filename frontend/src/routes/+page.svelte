@@ -5,17 +5,15 @@
         CirclePlus,
         FileSpreadsheet,
         Gamepad2,
-        Moon,
         ListFilter,
         Search,
         Sparkles,
-        Sun,
         Upload,
         Users,
         X,
         Zap,
     } from "@lucide/svelte";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { Avatar, AvatarFallback } from "$lib/components/ui/avatar/index.js";
     import { Badge } from "$lib/components/ui/badge/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
@@ -35,7 +33,7 @@
     import GameSelection from "$lib/components/GameSelection.svelte";
     import deepRockLogo from "$lib/assets/DRG_Logo.webp";
     import lethalCompanyLogo from "$lib/assets/lethal company logo.png";
-    import overcookedLogo from "$lib/assets/overcooked logo.png";
+    import overcookedLogo from "$lib/assets/Overcooked_2_logo_image3.webp";
     import peakLogo from "$lib/assets/peak logo.webp";
     import seaOfThievesLogo from "$lib/assets/Sea-Of-Thieves-Logo.png";
     import cs2Logo from "$lib/assets/cs2 logo.jpg";
@@ -81,7 +79,8 @@
     let importedFile = $state("");
     let chosenGame = $state(/** @type {typeof games[number] | null} */ (null));
     let showResult = $state(false);
-    let isDark = $state(true);
+    const theme = getContext("theme");
+    let isDark = $derived(theme.isDark);
     let userDialogOpen = $state(false);
     let gameDialogOpen = $state(false);
     let userName = $state("");
@@ -434,19 +433,10 @@
 </svelte:head>
 
 <div class="app-shell" class:dark-mode={isDark}>
-    <button
-        class="theme-toggle"
-        type="button"
-        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        onclick={() => (isDark = !isDark)}
-    >
-        {#if isDark}<Sun size={16} />{:else}<Moon size={16} />{/if}
-    </button>
-
     <main>
         <section class="intro">
             <p class="eyebrow">Game night planner</p>
-            <h1>What are we playing?</h1>
+            <h1>Game Night Player</h1>
             <p class="subtitle">
                 Pick your crew. We'll find the games you all have.
             </p>
@@ -832,7 +822,7 @@
          * Nothing on the main page should create vertical
          * overflow on desktop.
          */
-        height: 100dvh;
+        height: 100%;
         min-height: 0;
         overflow: hidden;
 
@@ -878,7 +868,7 @@
         height: 100%;
         min-height: 0;
         margin: 0;
-        overflow: hidden;
+        overflow: auto;
     }
 
     :global(button),

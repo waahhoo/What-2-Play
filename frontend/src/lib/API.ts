@@ -47,6 +47,12 @@ export async function post<TResponse, TBody = unknown>(endpoint: string, body?: 
     return response.json() as Promise<TResponse>;
 }
 
+export async function remove<TResponse>(endpoint: string): Promise<TResponse> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, { method: "DELETE" });
+    if (!response.ok) throw new Error(await getErrorMessage(response));
+    return response.json() as Promise<TResponse>;
+}
+
 export const getUsers = () => get<User[]>("/users");
 export const getUserGames = (fullName: string) =>
     get<Game[]>(`/users/${encodeURIComponent(fullName)}/games`);
@@ -55,6 +61,8 @@ export const getGames = () => get<Game[]>("/games");
 export const createGame = (game: GameCreate) => post<Game, GameCreate>("/games", game);
 export const addOwnedGame = (fullName: string, gameName: string) =>
     post<OwnershipResponse>(`/users/${encodeURIComponent(fullName)}/games/${encodeURIComponent(gameName)}`);
+export const removeOwnedGame = (fullName: string, gameName: string) =>
+    remove<OwnershipResponse>(`/users/${encodeURIComponent(fullName)}/games/${encodeURIComponent(gameName)}`);
 
 async function getErrorMessage(response: Response): Promise<string> {
     try {
