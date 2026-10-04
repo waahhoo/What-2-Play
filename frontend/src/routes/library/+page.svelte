@@ -1,9 +1,10 @@
 <script>
-	import { X } from '@lucide/svelte';
+	import { Check, EllipsisVertical, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { getContext } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { addOwnedGame, getGames, getUserGames, getUsers, removeOwnedGame } from '$lib/API';
+	import { getGames, getUserGames, getUsers } from '$lib/API';
+	import { selectedGames } from '$lib/stores/selected-games.js';
 
 	import deepRockLogo from '$lib/assets/DRG_Logo.webp';
 	import lethalCompanyLogo from '$lib/assets/lethal company logo.png';
@@ -51,6 +52,8 @@
 	import dstLogo from '$lib/assets/dst logo.jpg';
 	import gambleWithFriendsLogo from '$lib/assets/gamble with friends logo.jpg';
 	import chivalryLogo from '$lib/assets/chivalry2.jpg';
+	import huntLogo from '$lib/assets/hunt logo.webp';
+	import apexLegendsLogo from '$lib/assets/apex legends logo.webp';
 
 	const theme = getContext('theme');
 	let isDark = $derived(theme.isDark);
@@ -64,8 +67,6 @@
 	let dataLoading = $state(true);
 	let dataError = $state('');
 	let dialogLoading = $state(false);
-	let addingOwner = $state('');
-	let removingOwner = $state('');
 	let dialogError = $state('');
 	let sortedGames = $derived(
 		[...backendGames].sort((firstGame, secondGame) =>
@@ -117,12 +118,17 @@
 		'Lockdown Protocol': lockdownLogo,
 		'Far Far West': farFarWestLogo,
 		'The Outlast Trials': outlastLogo,
+		'Outlast Trials': outlastLogo,
 		'Dont Starve Together': dstLogo,
+		"Don't Starve Together": dstLogo,
 		DST: dstLogo,
 		'Gamble With Your Friends': gambleWithFriendsLogo,
 		Gamble: gambleWithFriendsLogo,
 		Chivalry: chivalryLogo,
-		'Chivalry 2': chivalryLogo
+		'Chivalry 2': chivalryLogo,
+		'Hunt: Showdown': huntLogo,
+		'Hunt Showdown': huntLogo,
+		'Apex Legends': apexLegendsLogo
 	});
 
 	let selectedDetails = $derived(
@@ -136,11 +142,11 @@
 	let owners = $derived(
 		users.filter((user) => (userGames[user.full_name] ?? []).some((game) => game.game_name === selectedDetails.game_name))
 	);
-	let availableOwners = $derived(
-		users.filter(
-			(user) => !owners.some((owner) => owner.full_name === user.full_name)
-		)
-	);
+
+	/** @param {Game} game */
+	function isSelected(game) {
+		return $selectedGames.some((selectedGame) => selectedGame.game_name === game.game_name);
+	}
 
 	/** @param {string} gameName */
 	function getGameImage(gameName) {
@@ -162,7 +168,14 @@
 	}
 
 	/** @param {Game} game */
-	async function openGame(game) {
+	function toggleGame(game) {
+		$selectedGames = isSelected(game)
+			? $selectedGames.filter((selectedGame) => selectedGame.game_name !== game.game_name)
+			: [...$selectedGames, game];
+	}
+
+	/** @param {Game} game */
+	async function openGameInfo(game) {
 		selectedGame = game;
 		dialogOpen = true;
 		dialogError = '';
@@ -182,41 +195,6 @@
 		}
 	}
 
-	/** @param {User} user */
-	async function addOwner(user) {
-		addingOwner = user.full_name;
-		dialogError = '';
-		try {
-			await addOwnedGame(user.full_name, selectedDetails.game_name);
-			userGames = {
-				...userGames,
-				[user.full_name]: [...(userGames[user.full_name] ?? []), selectedDetails]
-			};
-		} catch (error) {
-			dialogError = error instanceof Error ? error.message : 'Could not update ownership.';
-		} finally {
-			addingOwner = '';
-		}
-	}
-
-	/** @param {User} user */
-	async function removeOwner(user) {
-		removingOwner = user.full_name;
-		dialogError = '';
-		try {
-			await removeOwnedGame(user.full_name, selectedDetails.game_name);
-			userGames = {
-				...userGames,
-				[user.full_name]: (userGames[user.full_name] ?? []).filter(
-					(game) => game.game_name !== selectedDetails.game_name
-				)
-			};
-		} catch (error) {
-			dialogError = error instanceof Error ? error.message : 'Could not update ownership.';
-		} finally {
-			removingOwner = '';
-		}
-	}
 </script>
 
 <svelte:head>
@@ -228,7 +206,7 @@
 	<header class="library-header">
 		<p class="eyebrow">Your game shelf</p>
 		<h1>Library</h1>
-		<p class="subtitle">Choose a game to see who owns it for game night.</p>
+		<p class="subtitle">Choose games to add to tonight's random selection pool.</p>
 	</header>
 
 	<main class="library-grid" aria-label="Game library">
@@ -240,16 +218,29 @@
 			<p class="data-status">No games have been added yet.</p>
 		{:else}
 		{#each sortedGames as game}
-			<button
-				type="button"
-				class="library-card"
-				aria-label={`View details for ${game.game_name}`}
-				onclick={() => openGame(game)}
-			>
-				<img src={getGameImage(game.game_name)} alt={game.game_name} />
-				<span class="card-shade"></span>
-				<span class="card-title">{game.game_name}</span>
-			</button>
+			<article class="library-card" class:selected={isSelected(game)}>
+				<button
+					type="button"
+					class="library-select"
+					class:selected={isSelected(game)}
+					aria-label={`${isSelected(game) ? 'Remove' : 'Add'} ${game.game_name} ${isSelected(game) ? 'from' : 'to'} the selection pool`}
+					aria-pressed={isSelected(game)}
+					onclick={() => toggleGame(game)}
+				>
+					<img src={getGameImage(game.game_name)} alt={game.game_name} />
+					{#if isSelected(game)}<span class="selected-mark"><Check size={15} strokeWidth={3} /></span>{/if}
+					<span class="card-shade"></span>
+					<span class="card-title">{game.game_name}</span>
+				</button>
+				<button
+					type="button"
+					class="game-info"
+					aria-label={`View information for ${game.game_name}`}
+					onclick={() => openGameInfo(game)}
+				>
+					<EllipsisVertical size={20} />
+				</button>
+			</article>
 		{/each}
 		{/if}
 	</main>
@@ -276,11 +267,7 @@
 			<section class="owners-section">
 				<h3>Owners</h3>
 				{#if dialogLoading}<p class="dialog-muted">Loading ownership...</p>{:else if owners.length === 0}<p class="dialog-muted">Nobody owns this yet.</p>{:else}<div class="owner-list">
-					{#each owners as owner}<button class="owner-pill" type="button" aria-label={`Remove ${owner.full_name}`} onclick={() => removeOwner(owner)} disabled={Boolean(removingOwner) || Boolean(addingOwner)}><span>{owner.full_name}</span><X size={13} class="owner-remove-icon" /></button>{/each}
-				</div>{/if}
-				<h3 class="add-owners-heading">Add Owners</h3>
-				{#if dialogLoading}<p class="dialog-muted">Loading users...</p>{:else if availableOwners.length === 0}<p class="dialog-muted">Everyone owns this game.</p>{:else}<div class="owner-list available-owner-list">
-					{#each availableOwners as user}<button class="owner-pill available-owner-pill" type="button" onclick={() => addOwner(user)} disabled={Boolean(addingOwner) || Boolean(removingOwner)}><span>{user.full_name}</span><span class="owner-add-label">{addingOwner === user.full_name ? 'Adding...' : 'Add'}</span></button>{/each}
+					{#each owners as owner}<span class="owner-pill">{owner.full_name}</span>{/each}
 				</div>{/if}
 				{#if dialogError}<p class="dialog-error">{dialogError}</p>{/if}
 			</section>
@@ -375,6 +362,68 @@
 		cursor: pointer;
 		isolation: isolate;
 		transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+	}
+
+	.library-card.selected {
+		border: 3px solid #d28696;
+		box-shadow: 0 12px 24px rgba(181, 93, 120, 0.24);
+	}
+
+	.library-select {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: 0;
+		color: inherit;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.library-select:focus-visible {
+		outline: 2px solid #d28696;
+		outline-offset: -5px;
+	}
+
+	.game-info {
+		position: absolute;
+		top: 9px;
+		right: 9px;
+		z-index: 4;
+		display: grid;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		padding: 0;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		border-radius: 50%;
+		color: #fff;
+		background: rgba(20, 12, 16, 0.45);
+		cursor: pointer;
+		transition: background 160ms ease, border-color 160ms ease;
+	}
+
+	.game-info:hover,
+	.game-info:focus-visible {
+		border-color: #fff;
+		background: rgba(20, 12, 16, 0.72);
+		outline: none;
+	}
+
+	.selected-mark {
+		position: absolute;
+		top: 9px;
+		left: 9px;
+		z-index: 3;
+		display: grid;
+		place-items: center;
+		width: 27px;
+		height: 27px;
+		border-radius: 50%;
+		color: #fff;
+		background: #d28696;
+		box-shadow: 0 2px 8px rgba(20, 12, 16, 0.28);
 	}
 
 	.library-card:hover,

@@ -27,6 +27,7 @@
         getUserGames,
         getUsers,
     } from "$lib/API";
+    import { selectedGames } from "$lib/stores/selected-games.js";
 
     /** @typedef {import("$lib/API").Game} Game */
     /** @typedef {import("$lib/API").User} User */
@@ -34,6 +35,7 @@
     import deepRockLogo from "$lib/assets/DRG_Logo.webp";
     import lethalCompanyLogo from "$lib/assets/lethal company logo.png";
     import overcookedLogo from "$lib/assets/Overcooked_2_logo_image3.webp";
+    import overcookedAltLogo from "$lib/assets/overcooked logo.png";
     import peakLogo from "$lib/assets/peak logo.webp";
     import seaOfThievesLogo from "$lib/assets/Sea-Of-Thieves-Logo.png";
     import cs2Logo from "$lib/assets/cs2 logo.jpg";
@@ -71,8 +73,17 @@
     import puckLogo from "$lib/assets/puck logo.jpg";
     import arcRaidersLogo from "$lib/assets/arc raiders logo.webp";
     import bodycamLogo from "$lib/assets/body cam logo.jpg";
+    import lockdownLogo from "$lib/assets/lockdown logo.jpg";
+    import farFarWestLogo from "$lib/assets/farfarwest.jpg";
+    import outlastLogo from "$lib/assets/outlast logo.jpg";
+    import dstLogo from "$lib/assets/dst logo.jpg";
+    import gambleWithFriendsLogo from "$lib/assets/gamble with friends logo.jpg";
+    import chivalryLogo from "$lib/assets/chivalry2.jpg";
+    import huntLogo from "$lib/assets/hunt logo.webp";
+    import apexLegendsLogo from "$lib/assets/apex legends logo.webp";
 
     let selectedNames = $state(/** @type {string[]} */ ([]));
+    let selectionMode = $state(/** @type {"users" | "games" | null} */ (null));
     let searchTerm = $state("");
     let platformFilter = $state("All platforms");
     let maxMinutes = $state("Any length");
@@ -139,6 +150,7 @@
         "War Dogs": warDogsLogo,
         "Civ 6": civ6Logo,
         "Overcooked! 2": overcookedLogo,
+        "Overcooked 2": overcookedAltLogo,
         "Lethal Company": lethalCompanyLogo,
         Fortnite: fortniteLogo,
         Subnautica: subnauticaLogo,
@@ -169,6 +181,20 @@
         Puck: puckLogo,
         "Arc Raiders": arcRaidersLogo,
         Bodycam: bodycamLogo,
+        "Lockdown Protocol": lockdownLogo,
+        "Far Far West": farFarWestLogo,
+        "The Outlast Trials": outlastLogo,
+        "Outlast Trials": outlastLogo,
+        "Dont Starve Together": dstLogo,
+        "Don't Starve Together": dstLogo,
+        DST: dstLogo,
+        "Gamble With Your Friends": gambleWithFriendsLogo,
+        Gamble: gambleWithFriendsLogo,
+        Chivalry: chivalryLogo,
+        "Chivalry 2": chivalryLogo,
+        "Hunt: Showdown": huntLogo,
+        "Hunt Showdown": huntLogo,
+        "Apex Legends": apexLegendsLogo,
     });
     const playerColors = ["coral", "blue", "gold", "green", "purple"];
 
@@ -257,7 +283,18 @@
                 supportsGroup(game),
         );
     });
-    let matchingGames = $derived(filteredGames);
+    let matchingGames = $derived.by(() => {
+        if (selectionMode === "games" || ($selectedGames.length > 0 && selectionMode !== "users")) {
+            return games.filter((game) =>
+                $selectedGames.some((selectedGame) => selectedGame.game_name === game.title),
+            );
+        }
+        return filteredGames;
+    });
+
+    let activeSelectionMode = $derived(
+        $selectedGames.length > 0 && selectionMode !== "users" ? "games" : selectionMode,
+    );
 
     /** @param {typeof games[number]} winner */
     function handleGameResult(winner) {
@@ -270,6 +307,42 @@
         selectedNames = selectedNames.includes(name)
             ? selectedNames.filter((item) => item !== name)
             : [...selectedNames, name];
+    }
+
+    function chooseUsers() {
+        selectionMode = "users";
+        $selectedGames = [];
+    }
+
+    function chooseGames() {
+        selectionMode = "games";
+        selectedNames = [];
+    }
+
+    /** @param {typeof games[number]} game */
+    function toggleGame(game) {
+        const isSelected = $selectedGames.some(
+            (selectedGame) => selectedGame.game_name === game.title,
+        );
+        $selectedGames = isSelected
+            ? $selectedGames.filter((selectedGame) => selectedGame.game_name !== game.title)
+            : [
+                  ...$selectedGames,
+                  {
+                      game_name: game.title,
+                      player_limit: game.maxPlayers,
+                      genre: game.genre,
+                      platform: game.platform,
+                  },
+              ];
+    }
+
+    function clearSelection() {
+        if (activeSelectionMode === "games") {
+            $selectedGames = [];
+        } else if (activeSelectionMode === "users") {
+            selectedNames = [];
+        }
     }
 
     /** @param {Event} event */
@@ -451,14 +524,43 @@
             </p>
         </section>
 
-        <section class="players-section">
+        <section class="selection-mode-section" aria-label="Randomizer pool">
             <div class="section-heading">
-                <h2>Who's playing?</h2>
-                <Badge href="" class="pill" variant="secondary"
-                    >{playerCount} selected</Badge
-                >
+                <h2>Choose your pool</h2>
+                {#if activeSelectionMode !== null}<Badge href="" class="pill" variant="secondary"
+                        >{activeSelectionMode === "games" ? $selectedGames.length : selectedNames.length} selected</Badge
+                    >{/if}
             </div>
+            <div class="selection-mode-options">
+                <button
+                    type="button"
+                    class="selection-mode-button"
+                    class:chosen={activeSelectionMode === "users"}
+                    aria-pressed={activeSelectionMode === "users"}
+                    onclick={chooseUsers}
+                >
+                    <Users size={16} />
+                    <span>Filter by Friends</span>
+                </button>
+                <button
+                    type="button"
+                    class="selection-mode-button"
+                    class:chosen={activeSelectionMode === "games"}
+                    aria-pressed={activeSelectionMode === "games"}
+                    onclick={chooseGames}
+                >
+                    <Gamepad2 size={16} />
+                    <span>Filter by Games</span>
+                </button>
+            </div>
+            {#if activeSelectionMode === null}
+                <p class="mode-prompt">Choose friends to find a shared game, or select games from the Library.</p>
+            {/if}
+        </section>
 
+        <div class="pool-content">
+        {#if activeSelectionMode === "users"}
+        <section class="players-section">
             {#if dataLoading}<p class="data-status">
                     Loading players and games...
                 </p>{:else if dataError}<p class="data-error">
@@ -474,6 +576,15 @@
                         <span>Add Friend</span>
                     </button>
                 </div>{:else}<div class="player-grid">
+                    <button
+                        type="button"
+                        class="add-player-card flex items-center justify-center gap-2"
+                        onclick={openUserDialog}
+                        aria-label="Add user"
+                    >
+                        <CirclePlus size={24} />
+                        <span>Add Friend</span>
+                    </button>
                     {#each players as player}
                         <button
                             type="button"
@@ -499,92 +610,74 @@
                             </span>
                         </button>
                     {/each}
-                    <button
-                        type="button"
-                        class="add-player-card flex items-center justify-center gap-2"
-                        onclick={openUserDialog}
-                        aria-label="Add user"
-                    >
-                        <CirclePlus size={24} />
-                        <span>Add Friend</span>
-                    </button>
                 </div>{/if}
         </section>
+        {/if}
 
+        {#if activeSelectionMode !== null}
         <section class="results-section">
-            <div class="section-heading">
-                <h2>Matching games</h2>
+            {#if activeSelectionMode === "games"}
+                <div class="game-selection-grid">
+                    <button
+                        type="button"
+                        class="add-player-card add-game-card flex items-center justify-center gap-2"
+                        onclick={openGameDialog}
+                        aria-label="Add game"
+                    >
+                        <CirclePlus size={24} />
+                        <span>Add Game</span>
+                    </button>
+                    {#each games as game}
+                        {@const isSelected = $selectedGames.some((selectedGame) => selectedGame.game_name === game.title)}
+                        <button
+                            type="button"
+                            class="game-choice"
+                            class:chosen={isSelected}
+                            aria-pressed={isSelected}
+                            onclick={() => toggleGame(game)}
+                        >
+                            {#if game.image}<img src={game.image} alt={game.title} />{:else}<span class="game-choice-fallback">{game.title.slice(0, 2).toUpperCase()}</span>{/if}
+                            <span class="game-choice-name">{game.title}</span>
+                            <span class="game-choice-check">{#if isSelected}<Check size={14} strokeWidth={3} />{/if}</span>
+                        </button>
+                    {/each}
+                </div>
+                {#if games.length === 0}<p class="empty-selection">No games have been added yet.</p>{:else}<p class="empty-selection">Select games to spin the wheel.</p>{/if}
+            {:else if matchingGames.length === 0}
+                <p class="empty-selection">Select friends to find games everyone owns.</p>
+            {/if}
+
+            <div class="section-heading matching-games-heading">
+                <div class="matching-title-group">
+                    {#if activeSelectionMode === "games" ? $selectedGames.length > 0 : selectedNames.length > 0}
+                        <button type="button" class="clear-selection" onclick={clearSelection}>
+                            <X size={12} />
+                            <span>Clear selection</span>
+                        </button>
+                    {/if}
+                    <h2>Matching games</h2>
+                </div>
                 <Badge href="" class="pill" variant="secondary"
                     >{matchingGames.length} available</Badge
                 >
-                <button
-                    type="button"
-                    class="add-game-icon"
-                    aria-label="Add game"
-                    onclick={openGameDialog}
-                >
-                    <CirclePlus size={18} />
-                </button>
             </div>
 
-            <div class="bubble-stage" class:empty={matchingGames.length === 0}>
-                <div class="bubble-glow"></div>
-                <div class="orbit orbit-one"></div>
-                <div class="orbit orbit-two"></div>
-
-                {#each matchingGames as game, index}
-                    <div
-                        class="game-orb {game.accent}"
-                        style={`--index: ${index}; --total: ${matchingGames.length}; --orbit-duration: ${game.orbitDuration ?? 30}s; --orbit-delay: ${game.orbitDelay ?? 0}s`}
-                    >
-                        {#if game.image}<img
-                                class="orb-icon"
-                                src={game.image}
-                                alt={game.title}
-                            />{:else}<span class="orb-fallback"
-                                >{game.title.slice(0, 2).toUpperCase()}</span
-                            >{/if}
-                        <span class="orb-name">{game.title}</span>
-                    </div>
-                {/each}
-
-                {#if matchingGames.length === 0}
-                    <div class="no-games">
-                        <span>¯\_(ツ)_/¯</span>
-                        <strong>No matches yet</strong>
-                        <small
-                            >Select a new crew to find something to play.</small
-                        >
-                    </div>
-                {/if}
-                <button
-                    type="button"
-                    class="bubble-core"
-                    aria-label="Add game"
-                    onclick={openGameDialog}
-                >
-                    <span class="bubble-count">
-                        <Gamepad2 size={27} />
-                        <span>{matchingGames.length}</span>
-                    </span>
-                    <span class="bubble-add" aria-hidden="true">
-                        <CirclePlus size={30} />
-                    </span>
-                </button>
-            </div>
-
-            {#if playerCount > 1 && matchingGames.length > 0}
-                <GameSelection
-                    items={matchingGames}
-                    {isDark}
-                    onResult={handleGameResult}
-                />
+            {#if (activeSelectionMode === "games" || playerCount > 1) && matchingGames.length > 0}
+                <div class="case-opener">
+                    <GameSelection
+                        items={matchingGames}
+                        {isDark}
+                        onResult={handleGameResult}
+                    />
+                </div>
             {:else if playerCount === 1}
                 <p class="helper-text">
                     Choose one more player to start the game picker.
                 </p>
             {/if}
         </section>
+        {/if}
+        </div>
     </main>
 </div>
 
@@ -930,6 +1023,13 @@
         overflow: hidden;
     }
 
+    .pool-content {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
     .theme-toggle {
         position: fixed;
         top: 20px;
@@ -1026,6 +1126,56 @@
         background: var(--pill-bg);
         font-size: 11px;
         font-weight: 750;
+    }
+
+    .selection-mode-section {
+        margin-top: clamp(16px, 2.5vh, 28px);
+    }
+
+    .selection-mode-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: min(100%, 460px);
+        margin: 10px auto 0;
+    }
+
+    .selection-mode-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 38px;
+        padding: 8px 12px;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        background: var(--surface);
+        font-size: 11px;
+        font-weight: 750;
+        cursor: pointer;
+        transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+    }
+
+    .selection-mode-button:hover,
+    .selection-mode-button:focus-visible {
+        border-color: var(--border-hover);
+        color: var(--text);
+        outline: none;
+    }
+
+    .selection-mode-button.chosen {
+        border-color: var(--chosen-border);
+        color: var(--chosen-text);
+        background: var(--chosen-bg);
+        box-shadow: 0 3px 0 var(--chosen-shadow);
+    }
+
+    .mode-prompt {
+        margin: 9px 0 0;
+        color: var(--text-muted);
+        font-size: 11px;
+        text-align: center;
     }
 
     /* ============================================
@@ -1280,6 +1430,7 @@
          * intro + players sections.
          */
         min-height: 0;
+        flex: 1 1 auto;
 
         margin-top: clamp(14px, 2vh, 26px);
 
@@ -1289,25 +1440,155 @@
         overflow: hidden;
     }
 
+    .case-opener {
+        flex: 0 0 auto;
+        margin-top: auto;
+        padding-top: clamp(16px, 3vh, 34px);
+    }
+
+    .game-selection-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: clamp(6px, 0.7vw, 10px);
+        margin-top: clamp(10px, 1.5vh, 16px);
+        max-height: min(300px, 34vh);
+        overflow-y: auto;
+        padding: 2px;
+    }
+
+    .game-choice {
+        position: relative;
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        height: clamp(60px, 8vh, 82px);
+        padding: clamp(7px, 0.7vw, 12px);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text);
+        background: var(--surface);
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .game-choice:hover,
+    .game-choice:focus-visible {
+        border-color: var(--border-hover);
+        outline: none;
+    }
+
+    .game-choice.chosen {
+        color: #fff;
+        border-color: var(--chosen-border);
+        background: var(--chosen-bg);
+        box-shadow: 0 3px 0 var(--chosen-shadow);
+    }
+
+    .game-choice img,
+    .game-choice-fallback {
+        flex: 0 0 auto;
+        width: clamp(30px, 3vw, 42px);
+        height: clamp(30px, 3vw, 42px);
+        border-radius: var(--radius-sm);
+        object-fit: contain;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .game-choice-fallback {
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 850;
+    }
+
+    .game-choice-name {
+        min-width: 0;
+        margin-left: 8px;
+        overflow: hidden;
+        font-size: 11px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .game-choice-check {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        margin-left: auto;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        color: #fff;
+    }
+
+    .game-choice.chosen .game-choice-check {
+        border-color: var(--check-border);
+        background: var(--check-bg);
+    }
+
+    .empty-selection {
+        margin: 18px 0 0;
+        color: var(--text-muted);
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .matching-games-heading {
+        margin-top: clamp(14px, 2vh, 24px);
+    }
+
+    .matching-title-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .clear-selection {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 24px;
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--text-muted);
+        background: transparent;
+        font-size: 10px;
+        font-weight: 750;
+        cursor: pointer;
+        transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+    }
+
+    .clear-selection:hover:not(:disabled),
+    .clear-selection:focus-visible:not(:disabled) {
+        border-color: var(--border-hover);
+        color: var(--text);
+        background: var(--surface);
+        outline: none;
+    }
+
+    .clear-selection:disabled {
+        cursor: default;
+        opacity: 0.5;
+    }
+
     .bubble-stage {
         position: relative;
 
         display: grid;
         place-items: center;
 
-        /*
-         * Take the remaining available height.
-         */
-        flex: 1 1 auto;
+        /* Keep the bubble near the player section on short screens. */
+        flex: 0 0 clamp(190px, 28vh, 300px);
 
         width: min(100%, 690px);
 
-        /*
-         * This is the key change:
-         * NEVER use a fixed 390px height.
-         */
-        min-height: 0;
-        height: auto;
+        min-height: clamp(190px, 28vh, 300px);
+        height: clamp(190px, 28vh, 300px);
 
         margin: clamp(8px, 1.5vh, 22px) auto 0;
 
@@ -1985,7 +2266,7 @@
             margin-top: 10px;
         }
 
-        .bubble-stage {
+        .game-selection-grid {
             margin-top: 8px;
         }
 
@@ -2046,7 +2327,7 @@
             height: 15px;
         }
 
-        .bubble-stage {
+        .game-selection-grid {
             margin-top: 4px;
         }
 
@@ -2133,7 +2414,7 @@
             margin-top: 5px;
         }
 
-        .bubble-stage {
+        .game-selection-grid {
             margin-top: 2px;
         }
 
