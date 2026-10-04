@@ -356,6 +356,14 @@
         dialogError = "";
     }
 
+    /** @param {string} name */
+    function capitalizeWords(name) {
+        return name
+            .trim()
+            .toLowerCase()
+            .replace(/\b\w/g, (character) => character.toUpperCase());
+    }
+
     async function submitUser() {
         if (!userName.trim()) return;
         dialogLoading = true;
@@ -393,8 +401,9 @@
         dialogLoading = true;
         dialogError = "";
         try {
+            const normalizedGameName = capitalizeWords(gameName);
             const createdGame = await createGame({
-                game_name: gameName,
+                game_name: normalizedGameName,
                 player_limit: Number(playerLimit),
                 genre: selectedGenres.join(", "),
                 platform: selectedPlatforms.join(", "),

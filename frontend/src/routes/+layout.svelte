@@ -40,6 +40,7 @@
 		<div class="site-nav-links">
 			<a href="/" class:active={page.url.pathname === '/'}>Home</a>
 			<a href="/library" class:active={page.url.pathname === '/library'}>Library</a>
+			<a href="/friends" class:active={page.url.pathname === '/friends'}>Friends</a>
 		</div>
 		<button
 			class="theme-toggle"

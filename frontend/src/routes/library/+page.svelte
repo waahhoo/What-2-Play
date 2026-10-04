@@ -1,5 +1,6 @@
 <script>
 	import { X } from '@lucide/svelte';
+	import { onMount } from 'svelte';
 	import { getContext } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { addOwnedGame, getGames, getUserGames, getUsers, removeOwnedGame } from '$lib/API';
@@ -24,54 +25,109 @@
 	import palworldLogo from '$lib/assets/palworld logo.jpg';
 	import helldiversLogo from '$lib/assets/helldiver 2 logo.jpg';
 	import groundedLogo from '$lib/assets/grounded logo.jpg';
+	import warSelectionLogo from '$lib/assets/war selection logo.png';
+	import warDogsLogo from '$lib/assets/war dogs logo.jpg';
+	import jumpSpaceLogo from '$lib/assets/jump space logo.webp';
+	import subnautica2Logo from '$lib/assets/subnautica 2 logo.jpg';
+	import overwatchLogo from '$lib/assets/Overwatch-Logo.png';
+	import amongUsLogo from '$lib/assets/Among-Us-Logo.png';
+	import terrariaLogo from '$lib/assets/terarria logo.webp';
+	import theForestLogo from '$lib/assets/the-forest-logo.png';
+	import sonsOfTheForestLogo from '$lib/assets/Sons_of_the_Forest_logo.jpg';
+	import arkLogo from '$lib/assets/ARK-Logo.png';
+	import raftLogo from '$lib/assets/Raft_logo.png';
+	import stickFightLogo from '$lib/assets/stick fight logo.jpg';
+	import mordhauLogo from '$lib/assets/mordhau logo.png';
+	import rustLogo from '$lib/assets/Rust-Logo.png';
+	import humanFallFlatLogo from '$lib/assets/human fall fla logo.png';
+	import strandedDeepLogo from '$lib/assets/stranded deep logo.jpg';
+	import ultimateChickenHorseLogo from '$lib/assets/ultimate chicken horse logo.jpg';
+	import puckLogo from '$lib/assets/puck logo.jpg';
+	import arcRaidersLogo from '$lib/assets/arc raiders logo.webp';
+	import bodycamLogo from '$lib/assets/body cam logo.jpg';
+	import lockdownLogo from '$lib/assets/lockdown logo.jpg';
+	import farFarWestLogo from '$lib/assets/farfarwest.jpg';
+	import outlastLogo from '$lib/assets/outlast logo.jpg';
+	import dstLogo from '$lib/assets/dst logo.jpg';
+	import gambleWithFriendsLogo from '$lib/assets/gamble with friends logo.jpg';
+	import chivalryLogo from '$lib/assets/chivalry2.jpg';
 
 	const theme = getContext('theme');
 	let isDark = $derived(theme.isDark);
-	/** @typedef {[string, string]} LibraryGame */
 	/** @typedef {import('$lib/API').User} User */
 	/** @typedef {import('$lib/API').Game} Game */
-	let selectedGame = $state(/** @type {LibraryGame | null} */ (null));
+	let selectedGame = $state(/** @type {Game | null} */ (null));
 	let dialogOpen = $state(false);
 	let users = $state(/** @type {User[]} */ ([]));
 	let backendGames = $state(/** @type {Game[]} */ ([]));
 	let userGames = $state(/** @type {Record<string, Game[]>} */ ({}));
+	let dataLoading = $state(true);
+	let dataError = $state('');
 	let dialogLoading = $state(false);
 	let addingOwner = $state('');
 	let removingOwner = $state('');
 	let dialogError = $state('');
+	let sortedGames = $derived(
+		[...backendGames].sort((firstGame, secondGame) =>
+			firstGame.game_name.localeCompare(secondGame.game_name, undefined, { sensitivity: 'base' })
+		)
+	);
 
-	const games = [
-		['Deep Rock Galactic', deepRockLogo],
-		['Lethal Company', lethalCompanyLogo],
-		['Overcooked! 2', overcookedLogo],
-		['PEAK', peakLogo],
-		['Sea of Thieves', seaOfThievesLogo],
-		['Counter-Strike 2', cs2Logo],
-		['Rocket League', rocketLeagueLogo],
-		['Bloons TD 6', btd6Logo],
-		['Valorant', valorantLogo],
-		['7 Days to Die', sevenDaysLogo],
-		['Civilization VI', civ6Logo],
-		['Fortnite', fortniteLogo],
-		['Subnautica', subnauticaLogo],
-		['The Finals', finalsLogo],
-		['Minecraft', minecraftLogo],
-		['Valheim', valheimLogo],
-		['Fall Guys', fallGuysLogo],
-		['Palworld', palworldLogo],
-		['Helldivers 2', helldiversLogo],
-		['Grounded', groundedLogo]
-	];
-
-	const gameAliases = /** @type {Record<string, string>} */ ({
-		'Counter-Strike 2': 'CS2',
-		'Bloons TD 6': 'BTD6',
-		'Civilization VI': 'Civ 6'
+	const gameImages = /** @type {Record<string, string>} */ ({
+		CS2: cs2Logo,
+		'War Selection': warSelectionLogo,
+		'Rocket League': rocketLeagueLogo,
+		BTD6: btd6Logo,
+		Valorant: valorantLogo,
+		'Deep Rock Galactic': deepRockLogo,
+		'7 Days to Die': sevenDaysLogo,
+		'War Dogs': warDogsLogo,
+		'Civ 6': civ6Logo,
+		'Overcooked! 2': overcookedLogo,
+		'Lethal Company': lethalCompanyLogo,
+		Fortnite: fortniteLogo,
+		Subnautica: subnauticaLogo,
+		'The Finals': finalsLogo,
+		Minecraft: minecraftLogo,
+		Valheim: valheimLogo,
+		'Fall Guys': fallGuysLogo,
+		Palworld: palworldLogo,
+		'Jump Space': jumpSpaceLogo,
+		'Helldivers 2': helldiversLogo,
+		Grounded: groundedLogo,
+		'Subnautica 2': subnautica2Logo,
+		Overwatch: overwatchLogo,
+		'Among Us': amongUsLogo,
+		PEAK: peakLogo,
+		'Sea of Thieves': seaOfThievesLogo,
+		Terraria: terrariaLogo,
+		'The Forest': theForestLogo,
+		'Sons of the Forest': sonsOfTheForestLogo,
+		Ark: arkLogo,
+		Raft: raftLogo,
+		'Mordhau': mordhauLogo,
+		Rust: rustLogo,
+		'Stick Fight': stickFightLogo,
+		'Human Fall Flat': humanFallFlatLogo,
+		'Stranded Deep': strandedDeepLogo,
+		'Ultimate Chicken Horse': ultimateChickenHorseLogo,
+		Puck: puckLogo,
+		'Arc Raiders': arcRaidersLogo,
+		Bodycam: bodycamLogo,
+		'Lockdown Protocol': lockdownLogo,
+		'Far Far West': farFarWestLogo,
+		'The Outlast Trials': outlastLogo,
+		'Dont Starve Together': dstLogo,
+		DST: dstLogo,
+		'Gamble With Your Friends': gambleWithFriendsLogo,
+		Gamble: gambleWithFriendsLogo,
+		Chivalry: chivalryLogo,
+		'Chivalry 2': chivalryLogo
 	});
 
 	let selectedDetails = $derived(
-		backendGames.find((game) => game.game_name === getBackendGameName(selectedGame?.[0] ?? '')) ?? {
-			game_name: selectedGame?.[0] ?? '',
+		selectedGame ?? {
+			game_name: '',
 			genre: 'Game night favorite',
 			platform: 'Multiple platforms',
 			player_limit: 0
@@ -86,12 +142,26 @@
 		)
 	);
 
-	/** @param {string} displayName */
-	function getBackendGameName(displayName) {
-		return gameAliases[displayName] ?? displayName;
+	/** @param {string} gameName */
+	function getGameImage(gameName) {
+		return gameImages[gameName] ?? `https://placehold.co/600x840/332027/f3edef?text=${encodeURIComponent(gameName)}`;
 	}
 
-	/** @param {LibraryGame} game */
+	onMount(loadGames);
+
+	async function loadGames() {
+		dataLoading = true;
+		dataError = '';
+		try {
+			backendGames = await getGames();
+		} catch (error) {
+			dataError = error instanceof Error ? error.message : 'Could not load the game library.';
+		} finally {
+			dataLoading = false;
+		}
+	}
+
+	/** @param {Game} game */
 	async function openGame(game) {
 		selectedGame = game;
 		dialogOpen = true;
@@ -158,22 +228,30 @@
 	<header class="library-header">
 		<p class="eyebrow">Your game shelf</p>
 		<h1>Library</h1>
-		<p class="subtitle">Choose a game to keep in view for game night.</p>
+		<p class="subtitle">Choose a game to see who owns it for game night.</p>
 	</header>
 
 	<main class="library-grid" aria-label="Game library">
-		{#each games as [title, image]}
+		{#if dataLoading}
+			<p class="data-status">Loading games...</p>
+		{:else if dataError}
+			<p class="data-status data-error">{dataError}</p>
+		{:else if backendGames.length === 0}
+			<p class="data-status">No games have been added yet.</p>
+		{:else}
+		{#each sortedGames as game}
 			<button
 				type="button"
 				class="library-card"
-				aria-label={`View details for ${title}`}
-				onclick={() => openGame([title, image])}
+				aria-label={`View details for ${game.game_name}`}
+				onclick={() => openGame(game)}
 			>
-				<img src={image} alt={title} />
+				<img src={getGameImage(game.game_name)} alt={game.game_name} />
 				<span class="card-shade"></span>
-				<span class="card-title">{title}</span>
+				<span class="card-title">{game.game_name}</span>
 			</button>
 		{/each}
+		{/if}
 	</main>
 </div>
 
@@ -184,10 +262,10 @@
 		</button>
 		{#if selectedGame}
 			<div class="dialog-game-heading">
-				<img src={selectedGame[1]} alt={selectedGame[0]} />
+				<img src={getGameImage(selectedGame.game_name)} alt={selectedGame.game_name} />
 				<div>
 					<p class="eyebrow">Game details</p>
-					<Dialog.Title class="dialog-title">{selectedGame[0]}</Dialog.Title>
+					<Dialog.Title class="dialog-title">{selectedGame.game_name}</Dialog.Title>
 				</div>
 			</div>
 			<div class="game-stats">
@@ -269,6 +347,18 @@
 		gap: clamp(12px, 2vw, 22px);
 		width: min(1120px, 100%);
 		margin: 0 auto;
+	}
+
+	.data-status {
+		grid-column: 1 / -1;
+		margin: 20px 0;
+		color: var(--library-muted);
+		font-size: 14px;
+		text-align: center;
+	}
+
+	.data-error {
+		color: #b54b55;
 	}
 
 	.library-card {
