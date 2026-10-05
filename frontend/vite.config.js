@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	ssr: {
-		noExternal: ['bits-ui']
+		noExternal: ['bits-ui', '@tanstack/svelte-query']
 	},
 	plugins: [
 		tailwindcss(),

@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { addOwnedGame, createGame, getGames, getUserGames, getUsers } from '$lib/API';
+	import { queryClient, queryKeys } from '$lib/query-client.js';
 	import { selectedGames } from '$lib/stores/selected-games.js';
 	import { selectedFriends } from '$lib/stores/selected-friends.js';
 
@@ -171,7 +172,7 @@
 		dataLoading = true;
 		dataError = '';
 		try {
-			backendGames = await getGames();
+			backendGames = await queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames });
 		} catch (error) {
 			dataError = error instanceof Error ? error.message : 'Could not load the game library.';
 		} finally {
@@ -192,7 +193,7 @@
 		dialogError = '';
 		dialogLoading = true;
 		try {
-			gameUsers = await getUsers();
+			gameUsers = await queryClient.fetchQuery({ queryKey: queryKeys.users, queryFn: getUsers });
 		} catch (error) {
 			dialogError = error instanceof Error ? error.message : 'Could not load users.';
 		} finally {
@@ -252,6 +253,8 @@
 					selectedGameUsers.map((user) => addOwnedGame(user, createdGame.game_name))
 				);
 			}
+			await queryClient.invalidateQueries({ queryKey: queryKeys.games });
+			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
 			await loadGames();
 			cancelAddGameDialog();
 		} catch (error) {
@@ -268,11 +271,20 @@
 		dialogError = '';
 		dialogLoading = true;
 		try {
-			const [loadedUsers, loadedGames] = await Promise.all([getUsers(), getGames()]);
+			const [loadedUsers, loadedGames] = await Promise.all([
+				queryClient.fetchQuery({ queryKey: queryKeys.users, queryFn: getUsers }),
+				queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames })
+			]);
 			users = loadedUsers;
 			backendGames = loadedGames;
 			const loadedOwnership = await Promise.all(
-				loadedUsers.map(async (user) => [user.full_name, await getUserGames(user.full_name)])
+				loadedUsers.map(async (user) => [
+					user.full_name,
+					await queryClient.fetchQuery({
+						queryKey: queryKeys.userGames(user.full_name),
+						queryFn: () => getUserGames(user.full_name)
+					})
+				])
 			);
 			userGames = Object.fromEntries(loadedOwnership);
 		} catch (error) {

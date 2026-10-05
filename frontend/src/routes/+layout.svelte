@@ -4,6 +4,8 @@
 	import { Moon, Sun } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { onMount, setContext } from 'svelte';
+	import { QueryClientProvider } from '@tanstack/svelte-query';
+	import { queryClient } from '$lib/query-client.js';
 
 	let { children } = $props();
 	let isDark = $state(true);
@@ -53,7 +55,9 @@
 			{#if isDark}<Sun size={16} />{:else}<Moon size={16} />{/if}
 		</button>
 	</nav>
-	<div class="site-content">
-		{@render children()}
-	</div>
+	<QueryClientProvider client={queryClient}>
+		<div class="site-content">
+			{@render children()}
+		</div>
+	</QueryClientProvider>
 </div>

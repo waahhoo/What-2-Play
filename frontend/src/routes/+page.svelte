@@ -29,6 +29,7 @@
     } from "$lib/API";
     import { selectedGames } from "$lib/stores/selected-games.js";
     import { selectedFriends } from "$lib/stores/selected-friends.js";
+    import { queryClient, queryKeys } from "$lib/query-client.js";
 
     /** @typedef {import("$lib/API").Game} Game */
     /** @typedef {import("$lib/API").User} User */
@@ -210,13 +211,16 @@
         dataError = "";
         try {
             const [backendUsers, backendGames] = await Promise.all([
-                getUsers(),
-                getGames(),
+                queryClient.fetchQuery({ queryKey: queryKeys.users, queryFn: getUsers }),
+                queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames }),
             ]);
             const usersWithGames = await Promise.all(
                 backendUsers.map(async (user) => ({
                     user,
-                    ownedGames: (await getUserGames(user.full_name)).map(
+                    ownedGames: (await queryClient.fetchQuery({
+                        queryKey: queryKeys.userGames(user.full_name),
+                        queryFn: () => getUserGames(user.full_name),
+                    })).map(
                         (game) => game.game_name,
                     ),
                 })),
@@ -378,7 +382,7 @@
         dialogError = "";
         dialogLoading = true;
         try {
-            userGames = await getGames();
+            userGames = await queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames });
         } catch (error) {
             dialogError =
                 error instanceof Error
@@ -394,7 +398,7 @@
         dialogError = "";
         dialogLoading = true;
         try {
-            gameUsers = await getUsers();
+            gameUsers = await queryClient.fetchQuery({ queryKey: queryKeys.users, queryFn: getUsers });
         } catch (error) {
             dialogError =
                 error instanceof Error
@@ -471,6 +475,8 @@
                     ),
                 );
             }
+            await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.userGames(createdUser.full_name) });
             await loadBackendData();
             userDialogOpen = false;
             userName = "";
@@ -509,6 +515,13 @@
                     ),
                 );
             }
+            await queryClient.invalidateQueries({ queryKey: queryKeys.games });
+            await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+            await Promise.all(
+                selectedGameUsers.map((user) =>
+                    queryClient.invalidateQueries({ queryKey: queryKeys.userGames(user) }),
+                ),
+            );
             await loadBackendData();
             gameDialogOpen = false;
             gameName = "";

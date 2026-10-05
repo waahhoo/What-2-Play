@@ -37,5 +37,9 @@
 		"typescript": "^6.0.3",
 		"vaul-svelte": "^1.0.0-next.7",
 		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@tanstack/svelte-form": "^1.33.5",
+		"@tanstack/svelte-query": "^6.3.1"
 	}
 }

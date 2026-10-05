@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { addOwnedGame, createUser, getGames, getUserGames, getUsers, removeOwnedGame } from '$lib/API';
+	import { queryClient, queryKeys } from '$lib/query-client.js';
 	import { selectedGames } from '$lib/stores/selected-games.js';
 	import { selectedFriends } from '$lib/stores/selected-friends.js';
 
@@ -51,7 +52,7 @@
 		dataLoading = true;
 		dataError = '';
 		try {
-			users = await getUsers();
+			users = await queryClient.fetchQuery({ queryKey: queryKeys.users, queryFn: getUsers });
 		} catch (error) {
 			dataError = error instanceof Error ? error.message : 'Could not load friends.';
 		} finally {
@@ -76,7 +77,7 @@
 		addFriendDialogOpen = true;
 		dialogError = '';
 		dialogLoading = true;
-		getGames()
+		queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames })
 			.then((loadedGames) => (friendGames = loadedGames))
 			.catch((error) => (dialogError = error instanceof Error ? error.message : 'Could not load games.'))
 			.finally(() => (dialogLoading = false));
@@ -105,6 +106,8 @@
 			if (selectedFriendGames.length > 0) {
 				await Promise.all(selectedFriendGames.map((gameName) => addOwnedGame(createdUser.full_name, gameName)));
 			}
+			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
+			await queryClient.invalidateQueries({ queryKey: queryKeys.games });
 			await loadFriends();
 			cancelAddFriendDialog();
 		} catch (error) {
@@ -121,7 +124,13 @@
 		dialogLoading = true;
 		dialogError = '';
 		try {
-			const [ownedGames, loadedGames] = await Promise.all([getUserGames(user.full_name), getGames()]);
+			const [ownedGames, loadedGames] = await Promise.all([
+				queryClient.fetchQuery({
+					queryKey: queryKeys.userGames(user.full_name),
+					queryFn: () => getUserGames(user.full_name)
+				}),
+				queryClient.fetchQuery({ queryKey: queryKeys.games, queryFn: getGames })
+			]);
 			selectedUserGames = ownedGames;
 			games = loadedGames;
 		} catch (error) {
@@ -138,6 +147,8 @@
 		dialogError = '';
 		try {
 			await addOwnedGame(selectedUser.full_name, game.game_name);
+			await queryClient.invalidateQueries({ queryKey: queryKeys.userGames(selectedUser.full_name) });
+			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
 			selectedUserGames = [...selectedUserGames, game];
 		} catch (error) {
 			dialogError = error instanceof Error ? error.message : 'Could not add this game.';
@@ -153,6 +164,8 @@
 		dialogError = '';
 		try {
 			await removeOwnedGame(selectedUser.full_name, game.game_name);
+			await queryClient.invalidateQueries({ queryKey: queryKeys.userGames(selectedUser.full_name) });
+			await queryClient.invalidateQueries({ queryKey: queryKeys.users });
 			selectedUserGames = selectedUserGames.filter((ownedGame) => ownedGame.game_name !== game.game_name);
 		} catch (error) {
 			dialogError = error instanceof Error ? error.message : 'Could not remove this game.';
