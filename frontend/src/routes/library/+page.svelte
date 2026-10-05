@@ -1,10 +1,13 @@
 <script>
-	import { Check, EllipsisVertical, X } from '@lucide/svelte';
+	import { Check, CirclePlus, EllipsisVertical, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { getContext } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { getGames, getUserGames, getUsers } from '$lib/API';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { addOwnedGame, createGame, getGames, getUserGames, getUsers } from '$lib/API';
 	import { selectedGames } from '$lib/stores/selected-games.js';
+	import { selectedFriends } from '$lib/stores/selected-friends.js';
 
 	import deepRockLogo from '$lib/assets/DRG_Logo.webp';
 	import lethalCompanyLogo from '$lib/assets/lethal company logo.png';
@@ -68,6 +71,15 @@
 	let dataError = $state('');
 	let dialogLoading = $state(false);
 	let dialogError = $state('');
+	let addGameDialogOpen = $state(false);
+	let gameName = $state('');
+	let playerLimit = $state(4);
+	let selectedGenres = $state(/** @type {string[]} */ ([]));
+	let selectedPlatforms = $state(/** @type {string[]} */ ([]));
+	let gameUsers = $state(/** @type {User[]} */ ([]));
+	let selectedGameUsers = $state(/** @type {string[]} */ ([]));
+	const genreOptions = ['Action', 'Adventure', 'Co-op', 'Competitive', 'Fighting', 'Horror', 'Party', 'Puzzle', 'RPG', 'Shooter', 'Simulation', 'Sports', 'Strategy', 'Survival'];
+	const platformOptions = ['Steam', 'Xbox', 'Epic Games', 'Blizzard', 'Riot Games'];
 	let sortedGames = $derived(
 		[...backendGames].sort((firstGame, secondGame) =>
 			firstGame.game_name.localeCompare(secondGame.game_name, undefined, { sensitivity: 'base' })
@@ -169,9 +181,84 @@
 
 	/** @param {Game} game */
 	function toggleGame(game) {
+		$selectedFriends = [];
 		$selectedGames = isSelected(game)
 			? $selectedGames.filter((selectedGame) => selectedGame.game_name !== game.game_name)
 			: [...$selectedGames, game];
+	}
+
+	async function openAddGameDialog() {
+		addGameDialogOpen = true;
+		dialogError = '';
+		dialogLoading = true;
+		try {
+			gameUsers = await getUsers();
+		} catch (error) {
+			dialogError = error instanceof Error ? error.message : 'Could not load users.';
+		} finally {
+			dialogLoading = false;
+		}
+	}
+
+	function cancelAddGameDialog() {
+		addGameDialogOpen = false;
+		gameName = '';
+		playerLimit = 4;
+		selectedGenres = [];
+		selectedPlatforms = [];
+		selectedGameUsers = [];
+		dialogError = '';
+	}
+
+	/** @param {string} genre */
+	function toggleGenre(genre) {
+		selectedGenres = selectedGenres.includes(genre)
+			? selectedGenres.filter((item) => item !== genre)
+			: [...selectedGenres, genre];
+	}
+
+	/** @param {string} platform */
+	function togglePlatform(platform) {
+		selectedPlatforms = selectedPlatforms.includes(platform)
+			? selectedPlatforms.filter((item) => item !== platform)
+			: [...selectedPlatforms, platform];
+	}
+
+	/** @param {string} fullName */
+	function toggleGameUser(fullName) {
+		selectedGameUsers = selectedGameUsers.includes(fullName)
+			? selectedGameUsers.filter((item) => item !== fullName)
+			: [...selectedGameUsers, fullName];
+	}
+
+	/** @param {string} name */
+	function capitalizeWords(name) {
+		return name.trim().toLowerCase().replace(/\b\w/g, /** @param {string} character */ (character) => character.toUpperCase());
+	}
+
+	async function submitGame() {
+		if (!gameName.trim() || selectedGenres.length === 0 || selectedPlatforms.length === 0) return;
+		dialogLoading = true;
+		dialogError = '';
+		try {
+			const createdGame = await createGame({
+				game_name: capitalizeWords(gameName),
+				player_limit: Number(playerLimit),
+				genre: selectedGenres.join(', '),
+				platform: selectedPlatforms.join(', ')
+			});
+			if (selectedGameUsers.length > 0) {
+				await Promise.all(
+					selectedGameUsers.map((user) => addOwnedGame(user, createdGame.game_name))
+				);
+			}
+			await loadGames();
+			cancelAddGameDialog();
+		} catch (error) {
+			dialogError = error instanceof Error ? error.message : 'Could not create game.';
+		} finally {
+			dialogLoading = false;
+		}
 	}
 
 	/** @param {Game} game */
@@ -214,9 +301,11 @@
 			<p class="data-status">Loading games...</p>
 		{:else if dataError}
 			<p class="data-status data-error">{dataError}</p>
-		{:else if backendGames.length === 0}
-			<p class="data-status">No games have been added yet.</p>
 		{:else}
+		<button type="button" class="add-card" onclick={openAddGameDialog} aria-label="Add game">
+			<CirclePlus size={24} />
+			<span>Add Game</span>
+		</button>
 		{#each sortedGames as game}
 			<article class="library-card" class:selected={isSelected(game)}>
 				<button
@@ -245,6 +334,42 @@
 		{/if}
 	</main>
 </div>
+
+<Dialog.Root bind:open={addGameDialogOpen}>
+	<Dialog.Content class={`form-dialog ${isDark ? 'dark-dialog' : ''}`} showCloseButton={false} portalProps={{}}>
+		<Dialog.Header class="dialog-header">
+			<Dialog.Title class="dialog-title">Insert game</Dialog.Title>
+			<Dialog.Description class="dialog-description">Add a game to the library.</Dialog.Description>
+		</Dialog.Header>
+		<div class="form-fields">
+			<label for="library-game-name">Game name</label>
+			<Input id="library-game-name" class="form-input" type="text" bind:value={gameName} placeholder="Deep Rock Galactic" />
+			<label for="library-player-limit">Player limit</label>
+			<Input id="library-player-limit" class="form-input" type="number" min="1" max="10" bind:value={playerLimit} />
+			<fieldset class="badge-fieldset"><legend>Genre</legend><div class="selection-badges">
+				{#each genreOptions as genre}<button type="button" class="selection-badge" class:selected={selectedGenres.includes(genre)} aria-pressed={selectedGenres.includes(genre)} onclick={() => toggleGenre(genre)}>{genre}</button>{/each}
+			</div></fieldset>
+			<fieldset class="badge-fieldset"><legend>Platform</legend><div class="selection-badges">
+				{#each platformOptions as platform}<button type="button" class="selection-badge" class:selected={selectedPlatforms.includes(platform)} aria-pressed={selectedPlatforms.includes(platform)} onclick={() => togglePlatform(platform)}>{platform}</button>{/each}
+			</div></fieldset>
+			<label>Owned by</label>
+			{#if dialogLoading}<p class="dialog-status">Loading users...</p>{:else if gameUsers.length === 0}<p class="dialog-status">No users found.</p>{:else}<div class="multi-select-list">
+				{#each gameUsers as user}<Button
+					variant="outline"
+					disabled={false}
+					class={`multi-select-option ${selectedGameUsers.includes(user.full_name) ? 'option-selected' : ''}`}
+					onclick={() => toggleGameUser(user.full_name)}
+					>{user.full_name}<span>{selectedGameUsers.includes(user.full_name) ? 'Added' : 'Add'}</span></Button>
+				{/each}
+			</div>{/if}
+		</div>
+		{#if dialogError}<p class="dialog-error">{dialogError}</p>{/if}
+		<Dialog.Footer class="dialog-footer">
+			<Button class="dialog-cancel" variant="outline" disabled={dialogLoading} onclick={cancelAddGameDialog}>Cancel</Button>
+			<Button class="dialog-button" disabled={dialogLoading || !gameName.trim() || selectedGenres.length === 0 || selectedPlatforms.length === 0} onclick={submitGame}>Confirm</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Content class={`game-dialog ${isDark ? 'dark-dialog' : ''}`} showCloseButton={false} portalProps={{}}>
@@ -365,6 +490,7 @@
 	}
 
 	.library-card.selected {
+		transform: translateY(-4px);
 		border: 3px solid #d28696;
 		box-shadow: 0 12px 24px rgba(181, 93, 120, 0.24);
 	}
@@ -432,6 +558,200 @@
 		border-color: #d28696;
 		box-shadow: 0 14px 24px rgba(48, 39, 33, 0.2);
 		outline: none;
+	}
+
+	.add-card {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		aspect-ratio: 0.72;
+		padding: 16px;
+		border: 1px dashed var(--library-border);
+		border-radius: 8px;
+		color: var(--library-text);
+		background: transparent;
+		cursor: pointer;
+		transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+	}
+
+	.add-card:hover,
+	.add-card:focus-visible {
+		transform: translateY(-4px);
+		border-color: #d28696;
+		background: rgba(210, 134, 150, 0.12);
+		outline: none;
+	}
+
+	.form-dialog {
+		max-height: min(86vh, 720px);
+		overflow-y: auto;
+	}
+
+	:global(.form-dialog) {
+		--dialog-bg: #fffdf7;
+		--dialog-text: #302721;
+		--dialog-muted: #81756d;
+		--dialog-border: #d6c7a9;
+		--dialog-input-bg: #f6e9d6;
+		--dialog-selected-bg: #f6e9d6;
+		--dialog-selected-border: #c7b58f;
+		--dialog-selected-text: #302721;
+		background: var(--dialog-bg);
+		color: var(--dialog-text);
+	}
+
+	:global(.form-dialog.dark-dialog) {
+		--dialog-bg: #332027;
+		--dialog-text: #f3edef;
+		--dialog-muted: #aa9ba0;
+		--dialog-border: #766067;
+		--dialog-input-bg: #1b1517;
+		--dialog-selected-bg: #b55d78;
+		--dialog-selected-border: #e398ab;
+		--dialog-selected-text: #ffffff;
+	}
+
+	:global(.form-dialog input) {
+		color: var(--dialog-text);
+		border-color: var(--dialog-border);
+		background: var(--dialog-input-bg);
+	}
+
+	:global(.form-dialog .dialog-title),
+	:global(.form-dialog .dialog-description) {
+		color: var(--dialog-text);
+	}
+
+	:global(.form-dialog .dialog-description) {
+		color: var(--dialog-muted);
+	}
+
+	:global(.dark-dialog [data-slot='button'].multi-select-option) {
+		color: var(--dialog-text) !important;
+		border-color: var(--dialog-border) !important;
+		background: var(--dialog-bg) !important;
+	}
+
+	:global(.dark-dialog [data-slot='button'].multi-select-option:hover) {
+		color: var(--dialog-text) !important;
+		border-color: var(--dialog-selected-border) !important;
+		background: var(--dialog-input-bg) !important;
+	}
+
+	:global(.dark-dialog [data-slot='button'].multi-select-option.option-selected) {
+		color: var(--dialog-selected-text) !important;
+		border-color: var(--dialog-selected-border) !important;
+		background: var(--dialog-selected-bg) !important;
+	}
+
+	:global(.dark-dialog [data-slot='button'].multi-select-option span) {
+		color: var(--dialog-muted) !important;
+	}
+
+	:global(.dark-dialog [data-slot='button'].dialog-cancel) {
+		color: var(--dialog-text) !important;
+		border-color: var(--dialog-border) !important;
+		background: var(--dialog-bg) !important;
+	}
+
+	.form-fields {
+		display: grid;
+		gap: 8px;
+		margin-top: 18px;
+	}
+
+	.form-fields label,
+	.badge-fieldset legend {
+		color: var(--dialog-text);
+		font-size: 12px;
+		font-weight: 750;
+	}
+
+	.form-fields input {
+		border-radius: 0.25rem;
+	}
+
+	.badge-fieldset {
+		display: grid;
+		gap: 8px;
+		min-width: 0;
+		margin: 5px 0 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.badge-fieldset legend {
+		padding: 0;
+	}
+
+	.selection-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 7px;
+	}
+
+	.selection-badge {
+		min-height: 34px;
+		padding: 7px 11px;
+		border: 1px solid var(--dialog-border);
+		border-radius: 999px;
+		color: var(--dialog-muted);
+		background: var(--dialog-bg);
+		font-size: 11px;
+		font-weight: 700;
+		transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+	}
+
+	.selection-badge:hover {
+		border-color: var(--dialog-selected-border);
+		color: var(--dialog-text);
+		transform: translateY(-1px);
+	}
+
+	.selection-badge.selected {
+		border-color: var(--dialog-selected-border);
+		color: var(--dialog-selected-text);
+		background: var(--dialog-selected-bg);
+		box-shadow: 0 2px 0 var(--dialog-selected-border);
+	}
+
+	.multi-select-list {
+		display: grid;
+		gap: 7px;
+		max-height: 180px;
+		overflow-y: auto;
+		padding: 2px;
+	}
+
+	.multi-select-option {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		min-height: 38px;
+		border-radius: 0.25rem;
+		color: var(--dialog-text);
+		border-color: var(--dialog-border);
+		background: var(--dialog-bg);
+		font-size: 12px;
+	}
+
+	.multi-select-option span {
+		color: var(--dialog-muted);
+		font-size: 10px;
+		font-weight: 750;
+	}
+
+	.multi-select-option.option-selected {
+		color: var(--dialog-selected-text);
+		border-color: var(--dialog-selected-border);
+		background: var(--dialog-selected-bg);
+	}
+
+	.dialog-status {
+		margin: 4px 0;
+		color: var(--dialog-muted);
+		font-size: 12px;
 	}
 
 	.library-card img {

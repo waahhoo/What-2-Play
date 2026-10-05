@@ -1,9 +1,13 @@
 <script>
-	import { X } from '@lucide/svelte';
+	import { Check, CirclePlus, EllipsisVertical, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { getContext } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { addOwnedGame, getGames, getUserGames, getUsers, removeOwnedGame } from '$lib/API';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { addOwnedGame, createUser, getGames, getUserGames, getUsers, removeOwnedGame } from '$lib/API';
+	import { selectedGames } from '$lib/stores/selected-games.js';
+	import { selectedFriends } from '$lib/stores/selected-friends.js';
 
 	const theme = getContext('theme');
 	let isDark = $derived(theme.isDark);
@@ -20,6 +24,10 @@
 	let addingGame = $state('');
 	let removingGame = $state('');
 	let dialogError = $state('');
+	let addFriendDialogOpen = $state(false);
+	let friendName = $state('');
+	let friendGames = $state(/** @type {Game[]} */ ([]));
+	let selectedFriendGames = $state(/** @type {string[]} */ ([]));
 
 	let sortedUsers = $derived(
 		[...users].sort((firstUser, secondUser) =>
@@ -48,6 +56,61 @@
 			dataError = error instanceof Error ? error.message : 'Could not load friends.';
 		} finally {
 			dataLoading = false;
+		}
+	}
+
+	/** @param {User} user */
+	function isSelected(user) {
+		return $selectedFriends.some((selectedFriend) => selectedFriend.full_name === user.full_name);
+	}
+
+	/** @param {User} user */
+	function toggleFriend(user) {
+		$selectedGames = [];
+		$selectedFriends = isSelected(user)
+			? $selectedFriends.filter((selectedFriend) => selectedFriend.full_name !== user.full_name)
+			: [...$selectedFriends, user];
+	}
+
+	function openAddFriendDialog() {
+		addFriendDialogOpen = true;
+		dialogError = '';
+		dialogLoading = true;
+		getGames()
+			.then((loadedGames) => (friendGames = loadedGames))
+			.catch((error) => (dialogError = error instanceof Error ? error.message : 'Could not load games.'))
+			.finally(() => (dialogLoading = false));
+	}
+
+	function cancelAddFriendDialog() {
+		addFriendDialogOpen = false;
+		friendName = '';
+		selectedFriendGames = [];
+		dialogError = '';
+	}
+
+	/** @param {string} gameName */
+	function toggleFriendGame(gameName) {
+		selectedFriendGames = selectedFriendGames.includes(gameName)
+			? selectedFriendGames.filter((item) => item !== gameName)
+			: [...selectedFriendGames, gameName];
+	}
+
+	async function submitFriend() {
+		if (!friendName.trim()) return;
+		dialogLoading = true;
+		dialogError = '';
+		try {
+			const createdUser = await createUser({ full_name: friendName });
+			if (selectedFriendGames.length > 0) {
+				await Promise.all(selectedFriendGames.map((gameName) => addOwnedGame(createdUser.full_name, gameName)));
+			}
+			await loadFriends();
+			cancelAddFriendDialog();
+		} catch (error) {
+			dialogError = error instanceof Error ? error.message : 'Could not create friend.';
+		} finally {
+			dialogLoading = false;
 		}
 	}
 
@@ -116,25 +179,45 @@
 			<p class="data-status">Loading friends...</p>
 		{:else if dataError}
 			<p class="data-status data-error">{dataError}</p>
-		{:else if users.length === 0}
-			<p class="data-status">No friends have been added yet.</p>
 		{:else}
+			<button type="button" class="add-card" onclick={openAddFriendDialog} aria-label="Add friend">
+				<CirclePlus size={24} />
+				<span>Add Friend</span>
+			</button>
 			{#each sortedUsers as user}
-				<button
-					type="button"
-					class="friend-card"
-					aria-label={`View games owned by ${user.full_name}`}
-					onclick={() => openUser(user)}
-				>
+				<article class="friend-card" class:selected={isSelected(user)}>
+				<button type="button" class="friend-select" aria-label={`${isSelected(user) ? 'Remove' : 'Add'} ${user.full_name} ${isSelected(user) ? 'from' : 'to'} the selection pool`} aria-pressed={isSelected(user)} onclick={() => toggleFriend(user)}>
 					<span class="friend-initials">{user.initials}</span>
+					{#if isSelected(user)}<span class="selected-mark"><Check size={15} strokeWidth={3} /></span>{/if}
 					<span class="card-shade"></span>
 					<span class="friend-name">{user.full_name}</span>
 					<span class="friend-count">{user.game_count} {user.game_count === 1 ? 'game' : 'games'}</span>
 				</button>
+				<button type="button" class="friend-info" aria-label={`View games owned by ${user.full_name}`} onclick={() => openUser(user)}><EllipsisVertical size={20} /></button>
+				</article>
 			{/each}
 		{/if}
 	</main>
 </div>
+
+<Dialog.Root bind:open={addFriendDialogOpen}>
+	<Dialog.Content class={`form-dialog ${isDark ? 'dark-dialog' : ''}`} showCloseButton={false} portalProps={{}}>
+		<Dialog.Header class="dialog-header">
+			<Dialog.Title class="dialog-title">Insert user</Dialog.Title>
+			<Dialog.Description class="dialog-description">Add a friend and choose the games they own.</Dialog.Description>
+		</Dialog.Header>
+		<div class="form-fields">
+			<label for="friend-name">Full name</label>
+			<Input id="friend-name" class="form-input" type="text" bind:value={friendName} placeholder="Alex Smith" />
+			<label>Games owned</label>
+			{#if dialogLoading}<p class="dialog-muted">Loading games...</p>{:else if friendGames.length === 0}<p class="dialog-muted">No games found.</p>{:else}<div class="multi-select-list">
+				{#each friendGames as game}<Button class={`multi-select-option ${selectedFriendGames.includes(game.game_name) ? 'option-selected' : ''}`} variant="outline" disabled={false} onclick={() => toggleFriendGame(game.game_name)}>{game.game_name}<span>{selectedFriendGames.includes(game.game_name) ? 'Added' : 'Add'}</span></Button>{/each}
+			</div>{/if}
+		</div>
+		{#if dialogError}<p class="dialog-error">{dialogError}</p>{/if}
+		<Dialog.Footer class="dialog-footer"><Button class="dialog-cancel" variant="outline" disabled={dialogLoading} onclick={cancelAddFriendDialog}>Cancel</Button><Button class="dialog-button" disabled={dialogLoading || !friendName.trim()} onclick={submitFriend}>Confirm</Button></Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <Dialog.Root bind:open={dialogOpen}>
 	<Dialog.Content class={`friend-dialog ${isDark ? 'dark-dialog' : ''}`} showCloseButton={false} portalProps={{}}>
@@ -289,11 +372,95 @@
 		transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 	}
 
+	.friend-select {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: 0;
+		color: inherit;
+		background: transparent;
+		cursor: pointer;
+	}
+
+	.friend-card.selected {
+		transform: translateY(-4px);
+		border: 3px solid #d28696;
+		box-shadow: 0 12px 24px rgba(181, 93, 120, 0.24);
+	}
+
+	.friend-select:focus-visible {
+		outline: 2px solid #d28696;
+		outline-offset: -5px;
+	}
+
 	.friend-card:hover,
 	.friend-card:focus-visible {
 		transform: translateY(-4px);
 		border-color: #d28696;
 		box-shadow: 0 14px 24px rgba(48, 39, 33, 0.2);
+		outline: none;
+	}
+
+	.friend-info {
+		position: absolute;
+		top: 9px;
+		right: 9px;
+		z-index: 4;
+		display: grid;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		padding: 0;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		border-radius: 50%;
+		color: #fff;
+		background: rgba(20, 12, 16, 0.45);
+		cursor: pointer;
+	}
+
+	.friend-info:hover,
+	.friend-info:focus-visible {
+		border-color: #fff;
+		background: rgba(20, 12, 16, 0.72);
+		outline: none;
+	}
+
+	.selected-mark {
+		position: absolute;
+		top: 9px;
+		left: 9px;
+		z-index: 3;
+		display: grid;
+		place-items: center;
+		width: 27px;
+		height: 27px;
+		border-radius: 50%;
+		color: #fff;
+		background: #d28696;
+	}
+
+	.add-card {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		aspect-ratio: 0.72;
+		padding: 16px;
+		border: 1px dashed var(--friends-border);
+		border-radius: 8px;
+		color: var(--friends-text);
+		background: transparent;
+		cursor: pointer;
+		transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+	}
+
+	.add-card:hover,
+	.add-card:focus-visible {
+		transform: translateY(-4px);
+		border-color: #d28696;
+		background: rgba(210, 134, 150, 0.12);
 		outline: none;
 	}
 

@@ -28,6 +28,7 @@
         getUsers,
     } from "$lib/API";
     import { selectedGames } from "$lib/stores/selected-games.js";
+    import { selectedFriends } from "$lib/stores/selected-friends.js";
 
     /** @typedef {import("$lib/API").Game} Game */
     /** @typedef {import("$lib/API").User} User */
@@ -200,6 +201,10 @@
 
     onMount(loadBackendData);
 
+    $effect(() => {
+        selectedNames = $selectedFriends.map((friend) => friend.full_name);
+    });
+
     async function loadBackendData() {
         dataLoading = true;
         dataError = "";
@@ -293,7 +298,11 @@
     });
 
     let activeSelectionMode = $derived(
-        $selectedGames.length > 0 && selectionMode !== "users" ? "games" : selectionMode,
+        $selectedGames.length > 0 && selectionMode !== "users"
+            ? "games"
+            : $selectedFriends.length > 0
+              ? "users"
+              : selectionMode,
     );
 
     /** @param {typeof games[number]} winner */
@@ -307,6 +316,14 @@
         selectedNames = selectedNames.includes(name)
             ? selectedNames.filter((item) => item !== name)
             : [...selectedNames, name];
+        $selectedGames = [];
+        const selectedPlayer = players.find((player) => player.name === name);
+        if (selectedPlayer) {
+            const isSelected = $selectedFriends.some((friend) => friend.full_name === name);
+            $selectedFriends = isSelected
+                ? $selectedFriends.filter((friend) => friend.full_name !== name)
+                : [...$selectedFriends, { full_name: selectedPlayer.name, initials: selectedPlayer.initials, game_count: selectedPlayer.gameCount }];
+        }
     }
 
     function chooseUsers() {
@@ -317,10 +334,12 @@
     function chooseGames() {
         selectionMode = "games";
         selectedNames = [];
+        $selectedFriends = [];
     }
 
     /** @param {typeof games[number]} game */
     function toggleGame(game) {
+        $selectedFriends = [];
         const isSelected = $selectedGames.some(
             (selectedGame) => selectedGame.game_name === game.title,
         );
@@ -338,9 +357,11 @@
     }
 
     function clearSelection() {
-        if (activeSelectionMode === "games") {
+        if ($selectedGames.length > 0) {
             $selectedGames = [];
-        } else if (activeSelectionMode === "users") {
+        }
+        if ($selectedFriends.length > 0 || selectedNames.length > 0) {
+            $selectedFriends = [];
             selectedNames = [];
         }
     }
@@ -655,11 +676,11 @@
                             <span>Clear selection</span>
                         </button>
                     {/if}
-                    <h2>Matching games</h2>
+                    {#if activeSelectionMode !== "games"}<h2>Matching games</h2>{/if}
                 </div>
-                <Badge href="" class="pill" variant="secondary"
+                {#if activeSelectionMode !== "games"}<Badge href="" class="pill" variant="secondary"
                     >{matchingGames.length} available</Badge
-                >
+                >{/if}
             </div>
 
             {#if (activeSelectionMode === "games" || playerCount > 1) && matchingGames.length > 0}
