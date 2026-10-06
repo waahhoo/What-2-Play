@@ -116,6 +116,7 @@
     let games = $state(
         /** @type {Array<{title: string, platform: string, players: string, maxPlayers: number, minutes: number, genre: string, accent: string, image?: string, orbitDuration?: number, orbitDelay?: number}>} */ ([]),
     );
+    let gamePoolSearchTerm = $state("");
 
     const platformOptions = [
         "Steam",
@@ -256,6 +257,11 @@
 
     let selectedPlayers = $derived(
         players.filter((player) => selectedNames.includes(player.name)),
+    );
+    let visiblePoolGames = $derived(
+        games.filter((game) =>
+            game.title.toLowerCase().includes(gamePoolSearchTerm.trim().toLowerCase()),
+        ),
     );
     let playerCount = $derived(selectedPlayers.length);
 
@@ -651,6 +657,15 @@
         {#if activeSelectionMode !== null}
         <section class="results-section">
             {#if activeSelectionMode === "games"}
+                <label class="game-search" for="game-pool-search">
+                    <Search size={16} />
+                    <input
+                        id="game-pool-search"
+                        type="search"
+                        bind:value={gamePoolSearchTerm}
+                        placeholder="Search games"
+                    />
+                </label>
                 <div class="game-selection-grid">
                     <button
                         type="button"
@@ -661,7 +676,7 @@
                         <CirclePlus size={24} />
                         <span>Add Game</span>
                     </button>
-                    {#each games as game}
+                    {#each visiblePoolGames as game}
                         {@const isSelected = $selectedGames.some((selectedGame) => selectedGame.game_name === game.title)}
                         <button
                             type="button"
@@ -676,7 +691,7 @@
                         </button>
                     {/each}
                 </div>
-                {#if games.length === 0}<p class="empty-selection">No games have been added yet.</p>{:else}<p class="empty-selection">Select games to spin the wheel.</p>{/if}
+                {#if games.length === 0}<p class="empty-selection">No games have been added yet.</p>{:else if visiblePoolGames.length === 0}<p class="empty-selection">No games match your search.</p>{:else}<p class="empty-selection">Select games to spin the wheel.</p>{/if}
             {:else if matchingGames.length === 0}
                 <p class="empty-selection">Select friends to find games everyone owns.</p>
             {/if}
@@ -1480,6 +1495,39 @@
         padding-top: clamp(16px, 3vh, 34px);
     }
 
+    .game-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: min(300px, 100%);
+        margin-top: 12px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        background: var(--surface);
+    }
+
+    .game-search:focus-within {
+        border-color: var(--border-hover);
+        outline: 2px solid color-mix(in srgb, var(--border-hover) 28%, transparent);
+    }
+
+    .game-search input {
+        width: 100%;
+        min-width: 0;
+        padding: 7px 0;
+        border: 0;
+        color: var(--text);
+        background: transparent;
+        outline: none;
+        font-size: 13px;
+    }
+
+    .game-search input::placeholder {
+        color: var(--text-muted);
+    }
+
     .game-selection-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1495,7 +1543,7 @@
         display: flex;
         align-items: center;
         min-width: 0;
-        height: clamp(60px, 8vh, 82px);
+        height: clamp(60px, 8vh, 92px);
         padding: clamp(7px, 0.7vw, 12px);
         border: 2px solid var(--border);
         border-radius: var(--radius-sm);

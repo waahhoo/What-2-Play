@@ -1,5 +1,5 @@
 <script>
-	import { Check, CirclePlus, EllipsisVertical, X } from '@lucide/svelte';
+	import { Check, CirclePlus, EllipsisVertical, Search, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { getContext } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -85,6 +85,10 @@
 		[...backendGames].sort((firstGame, secondGame) =>
 			firstGame.game_name.localeCompare(secondGame.game_name, undefined, { sensitivity: 'base' })
 		)
+	);
+	let gameSearchTerm = $state('');
+	let visibleGames = $derived(
+		sortedGames.filter((game) => game.game_name.toLowerCase().includes(gameSearchTerm.trim().toLowerCase()))
 	);
 
 	const gameImages = /** @type {Record<string, string>} */ ({
@@ -306,6 +310,10 @@
 		<p class="eyebrow">Your game shelf</p>
 		<h1>Library</h1>
 		<p class="subtitle">Choose games to add to tonight's random selection pool.</p>
+		<label class="library-search" for="library-game-search">
+			<Search size={16} aria-hidden="true" />
+			<input id="library-game-search" type="search" bind:value={gameSearchTerm} placeholder="Search games" />
+		</label>
 	</header>
 
 	<main class="library-grid" aria-label="Game library">
@@ -318,7 +326,7 @@
 			<CirclePlus size={24} />
 			<span>Add Game</span>
 		</button>
-		{#each sortedGames as game}
+		{#each visibleGames as game}
 			<article class="library-card" class:selected={isSelected(game)}>
 				<button
 					type="button"
@@ -343,6 +351,7 @@
 				</button>
 			</article>
 		{/each}
+		{#if sortedGames.length > 0 && visibleGames.length === 0}<p class="data-status">No games match your search.</p>{/if}
 		{/if}
 	</main>
 </div>
@@ -463,6 +472,42 @@
 		margin: 10px 0 0;
 		color: var(--library-muted);
 		font-size: 14px;
+	}
+
+	.library-search {
+		display: flex;
+		align-items: center;
+		width: min(280px, 100%);
+		margin: 18px auto 0;
+		padding: 0 12px;
+		border: 1px solid var(--library-border);
+		border-radius: 6px;
+		background: var(--library-card);
+	}
+
+	.library-search :global(svg) {
+		flex: 0 0 auto;
+		color: var(--library-muted);
+	}
+
+	.library-search:focus-within {
+		border-color: #d28696;
+		outline: 2px solid rgba(210, 134, 150, 0.28);
+	}
+
+	.library-search input {
+		width: 100%;
+		min-width: 0;
+		padding: 7px 0 7px 8px;
+		border: 0;
+		color: var(--library-text);
+		background: transparent;
+		outline: none;
+		font-size: 13px;
+	}
+
+	.library-search input::placeholder {
+		color: var(--library-muted);
 	}
 
 	.library-grid {
